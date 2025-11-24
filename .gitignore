@@ -1,0 +1,9 @@
+# Visual Studio 相关文件
+.vs/
+*.suo
+*.user
+*.sln.docstates
+# 编译产物
+x64/
+Debug/
+Release/
