@@ -131,6 +131,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_selectInputBtn_clicked()
 {
+    // 连续两个分号 (;;) 是 Qt 文件过滤器的语法规则，用于分隔不同的文件类型选项
     QString path = QFileDialog::getOpenFileName(this,
         "Select YUV File", "", "YUV Files (*.yuv);;All Files (*.*)");
     if (!path.isEmpty()) {
