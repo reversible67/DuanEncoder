@@ -14,6 +14,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include "EncoderThread.h"
+#include "PlayerThread.h"
 /*
 构建一个音视频编码工具的图形界面，并集成了编码线程的交互逻辑
 */
@@ -36,8 +37,16 @@ private slots:
     void onEncodeFinished(bool success);   // 编码完成处理
     void on_codecCombo_currentIndexChanged(int index); // 编码器选择
 
+    // 新添加播放相关槽函数
+    void on_selectPlayFileBtn_clicked();
+    void on_startPlayBtn_clicked();
+    void updatePlayLog(const QString& log);
+    void onPlayError(const QString& error);
+    void onPlayFinished();
+
 private:
     EncoderThread* m_encoderThread;        // 编码线程对象指针
+    PlayerThread* m_playerThread;
     int m_currentCodec = AV_CODEC_ID_H264; // 默认H.264编码器
 
     // 界面控件成员变量
@@ -53,4 +62,8 @@ private:
     QProgressBar* progressBar;            // 编码进度条
     QTextEdit* logEdit;                   // 日志显示文本框
     QPushButton* startEncodeBtn;          // 开始编码按钮
+
+    QLineEdit* playFileEdit;
+    QPushButton* selectPlayFileBtn;
+    QPushButton* startPlayBtn;
 };

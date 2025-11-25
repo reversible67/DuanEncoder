@@ -10,7 +10,7 @@ MainWindow::MainWindow(QWidget* parent)
     this->setFont(font);
     QApplication::setFont(font); // 全局应用字体
     // ========== Window Basic Settings ==========
-    this->setWindowTitle("Duan Qt + FFmpeg Encoder");
+    this->setWindowTitle("Duan Qt + FFmpeg Encoder And Player");
     this->resize(700, 600);
 
     // Create central widget and main layout
@@ -110,6 +110,21 @@ MainWindow::MainWindow(QWidget* parent)
     startEncodeBtn->setStyleSheet("QPushButton { font-size: 14px; }");
     mainLayout->addWidget(startEncodeBtn);
 
+    QGroupBox* playGroup = new QGroupBox("Video playback", this);
+    QHBoxLayout* playLayout = new QHBoxLayout();
+    playGroup->setLayout(playLayout);
+
+    playLayout->addWidget(new QLabel("Playing the file: "));
+    playFileEdit = new QLineEdit(this);
+    playFileEdit->setPlaceholderText("Select a video file to play");
+    selectPlayFileBtn = new QPushButton("Select a file", this);
+    startPlayBtn = new QPushButton("Start playback", this);
+
+    playLayout->addWidget(playFileEdit);
+    playLayout->addWidget(selectPlayFileBtn);
+    playLayout->addWidget(startPlayBtn);
+    mainLayout->addWidget(playGroup);
+
     // ========== Signal-Slot Connection ==========
     connect(selectInputBtn, &QPushButton::clicked, this, &MainWindow::on_selectInputBtn_clicked);
     connect(selectOutputBtn, &QPushButton::clicked, this, &MainWindow::on_selectOutputBtn_clicked);
@@ -117,11 +132,20 @@ MainWindow::MainWindow(QWidget* parent)
     connect(codecCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
         this, &MainWindow::on_codecCombo_currentIndexChanged);
 
+    connect(selectPlayFileBtn, &QPushButton::clicked, this, &MainWindow::on_selectPlayFileBtn_clicked);
+    connect(startPlayBtn, &QPushButton::clicked, this, &MainWindow::on_startPlayBtn_clicked);
+
     // Initialize encoder thread
     m_encoderThread = new EncoderThread(this);
     connect(m_encoderThread, &EncoderThread::encodeProgress, this, &MainWindow::updateProgress);
     connect(m_encoderThread, &EncoderThread::encodeLog, this, &MainWindow::updateLog);
     connect(m_encoderThread, &EncoderThread::encodeFinished, this, &MainWindow::onEncodeFinished);
+
+    // Initialize decoder thread
+    m_playerThread = new PlayerThread(this);
+    connect(m_playerThread, &PlayerThread::playLog, this, &MainWindow::updatePlayLog);
+    connect(m_playerThread, &PlayerThread::playError, this, &MainWindow::onPlayError);
+    connect(m_playerThread, &PlayerThread::playFinished, this, &MainWindow::onPlayFinished);
 }
 
 MainWindow::~MainWindow()
@@ -238,4 +262,55 @@ void MainWindow::on_codecCombo_currentIndexChanged(int index)
         }
         outputEdit->setText(currentOutput);
     }
+}
+
+void MainWindow::on_selectPlayFileBtn_clicked()
+{
+    QString path = QFileDialog::getOpenFileName(this,
+        "Select a video file", "", "Video file (*.h264 *.h265 *.mp4 *.avi);;All files (*.*)");
+    if (!path.isEmpty()) {
+        playFileEdit->setText(path);
+    }
+}
+
+void MainWindow::on_startPlayBtn_clicked()
+{
+    QString playFile = playFileEdit->text().trimmed();
+    if (playFile.isEmpty()) {
+        QMessageBox::warning(this, "Parameter error", "Please select a video file to play!");
+        return;
+    }
+
+    // 禁用播放按钮防止重复点击
+    startPlayBtn->setEnabled(false);
+    selectPlayFileBtn->setEnabled(false);
+
+    m_playerThread->setFilePath(playFile);
+    m_playerThread->start();
+}
+
+void MainWindow::updatePlayLog(const QString& log)
+{
+    logEdit->append("[play] " + log);
+    QTextCursor cursor = logEdit->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    logEdit->setTextCursor(cursor);
+}
+
+void MainWindow::onPlayError(const QString& error)
+{
+    logEdit->append("[Playback error] " + error);
+    QMessageBox::critical(this, "Playback error", error);
+
+    // 恢复按钮状态
+    startPlayBtn->setEnabled(true);
+    selectPlayFileBtn->setEnabled(true);
+}
+
+void MainWindow::onPlayFinished()
+{
+    logEdit->append("[play] Playback ended");
+    // 恢复按钮状态
+    startPlayBtn->setEnabled(true);
+    selectPlayFileBtn->setEnabled(true);
 }
